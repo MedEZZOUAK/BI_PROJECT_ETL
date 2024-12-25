@@ -1,0 +1,39 @@
+id,code,name,filiere,coeff,profID,semester,absence_bias,median_mark
+1,TC1,Langues et Communication I,GI,0.5,17,S1,2,14
+2,TC1,Langues et Communication I,GI,0.5,19,S1,2,14
+3,TC2,Management I,GI,1,21,S1,9,13.5
+4,TC3,Probabilités Statistiques et Calcul Stochastique,GI,1,22,S1,1,14
+5,TC4,Réseaux Informatiques I,GI,1,8,S1,5,12.5
+6,TC5,Systèmes d’Information et Bases de Données Relationnelles,GI,1,15,S1,5,13
+7,TC6,Théories des Graphes et Recherche Opérationnelle,GI,1,23,S1,3,15
+8,GINF21,Électronique Numérique,GI,1,24,S2,6,14.5
+9,GINF22,Programmation Web I,GI,1,10,S2,6,16
+10,GINF23,Programmation C Avancé et Complexité,GI,1,6,S2,1,14
+11,GINF24,Systèmes d’exploitation,GI,1,6,S2,1,14.5
+12,GINF25,Théories des Langages et Compilation,GI,1,2,S2,1,14.5
+13,GINF26,Architecture des Ordinateurs et Assembleur,GI,1,11,S2,9,14
+14,GINF31,Modélisation et Programmation Objet,GI,0.5,11,S3,1,13
+15,GINF31,Modélisation et Programmation Objet,GI,0.5,3,S3,9,13
+16,GINF32,Programmation Réseaux et Sécurité Informatique,GI,1,13,S3,4,14
+17,GINF33,Réseaux informatique II,GI,1,1,S3,4,13
+18,GINF34,Méthodologies et Génie Logiciel,GI,1,4,S3,6,14
+19,GINF35,Langues et Communication II,GI,0.33,19,S3,2,14
+20,GINF35,Langues et Communication II,GI,0.33,18,S3,2,14
+21,GINF35,Langues et Communication II,GI,0.34,25,S3,2,14
+22,GINF36,Management II,GI,1,26,S3,9,16
+23,GINF41,Intelligence Artificielle,GI,1,9,S4,5,13.5
+24,GINF42,Administration et Optimisation des BD,GI,1,12,S4,1,14
+25,GINF43,Programmation web II,GI,1,2,S4,1,13.5
+26,GINF44,Java Avancé,GI,1,7,S4,1,13.75
+27,GINF45,Vision Artificielle,GI,1,16,S4,6,13
+28,GINF46,Base de Données Relationnelle-Objet et Répartie,GI,1,5,S4,1,13.5
+29,GISIAD51,Système d’Intégration et Progiciel,GI,0.5,3,S5,7,13.5
+30,GISIAD51,Système d’Intégration et Progiciel,GI,0.5,4,S5,1,14
+31,GISIAD52,Business Intelligence,GI,1,9,S5,3,13.5
+32,GISIAD53,Urbanisation des Systèmes d’Information,GI,1,12,S5,1,14
+33,GISIAD54,Programmation des Systèmes,GI,1,11,S5,9,14
+34,GISIAD55,Technologies DotNet et JEE,GI,0.5,6,S5,1,14
+35,GISIAD55,Technologies DotNet et JEE,GI,0.5,4,S5,8,13
+36,GISIAD56,Langues et Communication III,GI,1,20,S5,1,14
+37,GISIAD56,Langues et Communication III,GI,1,17,S5,5,14
+38,GISIAD57,Management III,GI,1,27,S5,9,15
