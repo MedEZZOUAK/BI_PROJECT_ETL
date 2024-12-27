@@ -22,7 +22,19 @@ dag = DAG(
 
 # Base directory for promo data
 base_dir = os.getenv('AIRFLOW_BASE_DIR', '/opt/airflow/bi_data')
-
+def map_to_time_id(row, time_map):
+  # Calculate base year (2016 for promo 2019)
+  base_year = row['promo'] - 3
+  to_year = base_year + 1
+  if row['semester'] in ['S3', 'S4']:
+    base_year += 1
+    to_year += 1
+  elif row['semester'] == 'S5':
+    base_year += 2
+    to_year += 2
+  key = (f"{base_year}/{to_year}", row['semester'])
+  time_id = time_map.get(key)
+  return time_id
 def get_absences_module_promo(**kwargs):
   try:
     promo_folders = [f for f in os.listdir(base_dir) if f.startswith('promo_')]
@@ -199,15 +211,15 @@ def prepare_dw():
   cursor = conn.cursor()
   #clean the DW (dim_student,dim_module,dim_professor,dim_time,fact_student_performance)
   #if the tables doesn't exist create them
-  cursor.execute("DROP TABLE IF EXISTS dim_student")
-  cursor.execute("DROP TABLE IF EXISTS dim_module")
-  cursor.execute("DROP TABLE IF EXISTS dim_professor")
-  cursor.execute("DROP TABLE IF EXISTS dim_time")
-  cursor.execute("DROP TABLE IF EXISTS fact_student_performance")
+  cursor.execute("DROP TABLE IF EXISTS dim_student CASCADE")
+  cursor.execute("DROP TABLE IF EXISTS dim_module CASCADE")
+  cursor.execute("DROP TABLE IF EXISTS dim_professor CASCADE")
+  cursor.execute("DROP TABLE IF EXISTS dim_time CASCADE")
+  cursor.execute("DROP TABLE IF EXISTS fact_student_performance CASCADE")
   cursor.execute("""
     CREATE TABLE IF NOT EXISTS dim_student (
         student_id SERIAL PRIMARY KEY,
-        apogee VARCHAR(50) NOT NULL,
+        apogee VARCHAR(50) NOT NULL UNIQUE,
         nom VARCHAR(50) NOT NULL,
         prenom VARCHAR(50) NOT NULL,
         promo VARCHAR(50) NOT NULL,
@@ -223,8 +235,7 @@ def prepare_dw():
       name VARCHAR(100) NOT NULL,
       filiere VARCHAR(100) NOT NULL,
       coeff NUMERIC(5,2) NOT NULL,
-      semester VARCHAR(50) NOT NULL,
-      prof_id INTEGER NOT NULL
+      semester VARCHAR(50) NOT NULL
   );
   """)
   cursor.execute("""
@@ -248,8 +259,8 @@ def prepare_dw():
       total_absences FLOAT NOT NULL,
       module_id INTEGER NOT NULL,
       prof_id INTEGER NOT NULL,
-      promo INTEGER NOT NULL,
-      apogee INTEGER NOT NULL
+      apogee TEXT NOT NULL,
+      time_id INTEGER NOT NULL
   );
   """)
   conn.commit()
@@ -266,7 +277,6 @@ def load_data_dw(**kwargs):
     cursor = conn.cursor()
 
     students_df = kwargs['ti'].xcom_pull(key='students_df', task_ids='get_marks_and_students')
-    logging.info("Students_df: %s", students_df)
     if students_df is not None:
       students_df['apo'] = students_df['apo'].astype(int)
       students_df['nom'] = students_df['nom'].astype(str)
@@ -287,27 +297,25 @@ def load_data_dw(**kwargs):
       logging.error("students_df is None, cannot load data to dim_student")
 
     modules_df = kwargs['ti'].xcom_pull(key='modules_df', task_ids='load_prof_module')
-    logging.info("Modules_df: %s", modules_df)
-    logging.info("Modules_df columns: %s", modules_df.columns)
     if modules_df is not None:
         modules_df['id_module'] = modules_df['id_module'].astype(int)
         modules_df['code'] = modules_df['code'].astype(str)
         modules_df['name_module'] = modules_df['name_module'].astype(str)
         modules_df['filiere'] = modules_df['filiere'].astype(str)
         modules_df['coeff'] = modules_df['coeff'].astype(float)
-        modules_df['profID'] = modules_df['profID'].astype(int)
         modules_df['semester'] = modules_df['semester'].astype(str)
+        #drop profID column
+        modules_df.drop(columns=['profID'], inplace=True)
         for index, row in modules_df.iterrows():
             cursor.execute("""
-            INSERT INTO dim_module (code, name, filiere, coeff, semester, prof_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """, (row['code'], row['name_module'], row['filiere'], row['coeff'], row['semester'], row['profID']))
+            INSERT INTO dim_module (code, name, filiere, coeff, semester)
+            VALUES (%s, %s, %s, %s, %s)
+            """, (row['code'], row['name_module'], row['filiere'], row['coeff'], row['semester']))
         conn.commit()
         logging.info("Data loaded to dim_module")
     else:
         logging.error("modules_df is None, cannot load data to dim_module")
     prof_df = kwargs['ti'].xcom_pull(key='prof_df', task_ids='load_prof_module')
-    logging.info("Prof_df: %s", prof_df)
     if prof_df is not None:
         prof_df['id'] = prof_df['id'].astype(int)
         prof_df['name'] = prof_df['name'].astype(str)
@@ -325,41 +333,95 @@ def load_data_dw(**kwargs):
 
     marks_df = kwargs['ti'].xcom_pull(key='marks_df', task_ids='get_marks_and_students')
     logging.info("Marks_df: %s", marks_df)
-    if marks_df is not None:
-        unique_years = marks_df['year'].unique()
-        unique_semesters = modules_df['semester'].unique()
-        time_df = pd.DataFrame([(year, semester) for year in unique_years for semester in unique_semesters], columns=['year', 'semester'])
-        time_df['year'] = time_df['year'].astype(str)
-        for index, row in time_df.iterrows():
-            cursor.execute("""
-            INSERT INTO dim_time (year, semester)
-            VALUES (%s, %s)
-            """, (row['year'], row['semester']))
-        conn.commit()
-        logging.info("Data loaded to dim_time")
-    else:
-        logging.error("marks_df is None, cannot load data to dim_time")
 
     final_result_df = kwargs['ti'].xcom_pull(key='final_result_df', task_ids='transform_data')
+    # Time dimension data
+    data = [
+      ('2016/2017', 'S1'), ('2016/2017', 'S2'),
+      ('2017/2018', 'S1'), ('2017/2018', 'S2'), ('2017/2018', 'S3'), ('2017/2018', 'S4'),
+      ('2018/2019', 'S1'), ('2018/2019', 'S2'), ('2018/2019', 'S3'), ('2018/2019', 'S4'), ('2018/2019', 'S5'),
+      ('2019/2020', 'S1'), ('2019/2020', 'S2'), ('2019/2020', 'S3'), ('2019/2020', 'S4'), ('2019/2020', 'S5'),
+      ('2020/2021', 'S1'), ('2020/2021', 'S2'), ('2020/2021', 'S3'), ('2020/2021', 'S4'), ('2020/2021', 'S5'),
+      ('2021/2022', 'S1'), ('2021/2022', 'S2'), ('2021/2022', 'S3'), ('2021/2022', 'S4'), ('2021/2022', 'S5'),
+      ('2022/2023', 'S1'), ('2022/2023', 'S2'), ('2022/2023', 'S3'), ('2022/2023', 'S4'), ('2022/2023', 'S5'),
+      ('2023/2024', 'S1'), ('2023/2024', 'S2'), ('2023/2024', 'S3'), ('2023/2024', 'S4'), ('2023/2024', 'S5')
+    ]
+
+    time_df = pd.DataFrame(data, columns=['year', 'semester'])
+    time_df['year'] = time_df['year'].astype(str)
+    time_df['semester'] = time_df['semester'].astype(str)
+    time_df['time_id'] = time_df.index + 1  # Add index column
+    time_df.set_index('time_id', inplace=True)
+    logging.info("Final result df Columns: %s", final_result_df.columns)
+    logging.info("Modules df Columns: %s", modules_df.columns)
+    final_result_df = final_result_df.merge(modules_df[['id_module', 'semester']],
+                                            left_on='module_id', right_on='id_module')
     logging.info("Final_result_df: %s", final_result_df)
+    time_map = {}
+    for index, row in time_df.iterrows():
+      time_map[(row['year'], row['semester'])] = index
+
+    logging.info("Final_result_df: %s", final_result_df)
+
     if final_result_df is not None:
         final_result_df['total_absences'] = final_result_df['total_absences'].astype(float)
         final_result_df['module_id'] = final_result_df['module_id'].astype(int)
         final_result_df['prof_id'] = final_result_df['prof_id'].astype(int)
-        final_result_df['promo'] = final_result_df['promo'].astype(int)
-        final_result_df['apogee'] = final_result_df['apogee'].astype(int)
+        final_result_df['apogee'] = final_result_df['apogee'].astype(str)
+        final_result_df['time_id'] = final_result_df.apply(lambda row: map_to_time_id(row, time_map), axis=1)
+        final_result_df['time_id'] = final_result_df['time_id'].astype(int)
         for index, row in final_result_df.iterrows():
             cursor.execute("""
-            INSERT INTO fact_student_performance (total_absences, module_id, prof_id, promo, apogee)
+            INSERT INTO fact_student_performance (total_absences, module_id, prof_id, apogee, time_id)
             VALUES (%s, %s, %s, %s, %s)
-            """, (float(row['total_absences']), int(row['module_id']), int(row['prof_id']), int(row['promo']), int(row['apogee'])))
+            """, (row['total_absences'], row['module_id'], row['prof_id'], row['apogee'], row['time_id']))
         conn.commit()
         logging.info("Data loaded to fact_student_performance")
     else:
         logging.error("final_result_df is None, cannot load data to fact_student_performance")
-
+    for index, row in time_df.iterrows():
+        cursor.execute("""
+        INSERT INTO dim_time (year, semester)
+        VALUES (%s, %s)
+        """, (row['year'], row['semester']))
+    conn.commit()
+    logging.info("Data loaded to dim_time")
+    #adding some constraints
+    cursor.execute("""ALTER TABLE public.fact_student_performance
+        ADD CONSTRAINT fk_fact_student_apogee
+        FOREIGN KEY (apogee)
+        REFERENCES public.dim_student (apogee)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+        """)
+    cursor.execute("""ALTER TABLE public.fact_student_performance
+        ADD CONSTRAINT fk_fact_student_module_id
+        FOREIGN KEY (module_id)
+        REFERENCES public.dim_module (module_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+        """)
+    cursor.execute("""ALTER TABLE public.fact_student_performance
+        ADD CONSTRAINT fk_fact_student_prof_id
+        FOREIGN KEY (prof_id)
+        REFERENCES public.dim_professor (prof_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+        """)
+    cursor.execute("""ALTER TABLE public.fact_student_performance
+        ADD CONSTRAINT fk_fact_student_time_id
+        FOREIGN KEY (time_id)
+        REFERENCES public.dim_time (time_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+        """)
+    cursor.execute("""ALTER TABLE public.dim_student
+        ADD CONSTRAINT unique_apogee UNIQUE (apogee);
+        """)
     cursor.close()
+    conn.commit()
     conn.close()
+
 
 with dag:
     get_absences = PythonOperator(
@@ -393,3 +455,18 @@ with dag:
 
     # Set task dependencies
     get_absences >> [get_prof_modules, get_students_marks] >> fix_absences_data >> transform_data >> prepare_dw >> load_data_dw
+
+# TO DO : -alter table fact_student_performance apogee to Text type **
+# ALTER TABLE public.dim_student
+# ADD CONSTRAINT unique_apogee UNIQUE (apogee); ***
+# ALTER TABLE public.fact_student_performance
+# ADD CONSTRAINT fk_fact_student_apogee
+# FOREIGN KEY (apogee)
+# REFERENCES public.dim_student (apogee)
+# ON UPDATE CASCADE
+# ON DELETE CASCADE;
+# ALTER TABLE public.fact_student_performance
+# ALTER COLUMN apogee TYPE character varying(50)
+# USING apogee::character varying(50);
+
+#
