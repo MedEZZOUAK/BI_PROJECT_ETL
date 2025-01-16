@@ -1,0 +1,130 @@
+# Academic Performance Analysis System
+
+This project focuses on designing and implementing a Business Intelligence (BI) solution to centralize and analyze academic performance data. The system integrates data from multiple sources, processes it using an ETL pipeline, and provides meaningful insights through interactive dashboards and OLAP capabilities.
+
+## Features
+
+1. **ETL Workflow**
+    - Built using Apache Airflow for task orchestration.
+    - Handles data Extraction, Transformation, and Loading (ETL) from:
+        - CSV files (e.g., absences, modules).
+        - PostgreSQL databases (student and grade information).
+    - Ensures data consistency and reliability during the entire process.
+
+2. **Data Warehouse**
+    - Designed with a star schema for efficient storage and analysis.
+    - **Fact Table:** `fact_student_performance` stores key metrics like grades and attendance.
+    - **Dimension Tables:** Provide detailed context about:
+        - Students
+        - Professors
+        - Modules
+        - Time
+
+3. **Reporting Dashboard**
+    - Developed using Power BI.
+    - Features interactive visualizations and Key Performance Indicators (KPIs) such as:
+        - Grade averages per semester and module.
+        - Attendance rates per professor and course.
+        - Success rates for academic years and modules.
+
+4. **OLAP Integration**
+    - **Cube Design:**
+        - **Measures:** Average grades, total absences.
+        - **Dimensions:** Students, modules, professors, time.
+    - Enables multidimensional analysis to:
+        - Correlate attendance and performance.
+        - Compare trends across semesters and modules.
+        - Evaluate teaching effectiveness by professor.
+
+## Technologies Used
+
+- **ETL Pipeline:** Apache Airflow, Python, Pandas, psycopg2.
+- **Data Warehouse:** PostgreSQL, dimensional modeling (star schema).
+- **Reporting and Visualization:** Power BI.
+- **Orchestration:** Docker for containerized deployment of Airflow.
+
+## Architecture Overview
+
+### Data Sources
+
+- CSV files for absences, modules, and professors.
+- PostgreSQL database for student records and grades.
+
+### ETL Process
+
+1. **Extraction:** Gather data from CSV files and databases.
+2. **Transformation:**
+    - Clean and enrich data.
+    - Consolidate submodules.
+3. **Loading:** Store processed data in a Data Warehouse.
+
+### Data Warehouse Schema
+
+- **Fact Table:** `fact_student_performance`.
+- **Dimension Tables:** `dim_student`, `dim_module`, `dim_professor`, `dim_time`.
+
+### Visualization and Analysis
+
+- Dashboards with Power BI for trends, KPIs, and insights.
+- OLAP cube for multidimensional data exploration.
+
+## Setup Instructions
+
+1. **Prerequisites**
+    - Install Python (3.8+) and Docker.
+    - Set up PostgreSQL for the Data Warehouse.
+
+2. **Clone the Repository**
+
+    ```bash
+    git clone <repository-url>  
+    cd <repository-folder>  
+    ```
+3. **Activate Virtual Environment**
+    - Activate the existing virtual environment:
+        ```bash
+        venv\Scripts\activate
+        ```
+4. **Configure Apache Airflow**
+    - Use the provided `docker-compose.yml` to deploy Airflow with Docker:
+
+    ```bash
+    docker-compose up  
+    ```
+
+    - Define the ETL workflow DAG in the [dags](http://_vscodecontentref_/0) folder.
+
+5. **Prepare the Data Warehouse**
+    - Create the schema for the Data Warehouse by running the SQL scripts in `scripts/schema.sql`.
+
+6. **Load Initial Data**
+    - Populate the source database and CSV files with test data from the `data/` folder.
+
+7. **Run the ETL Pipeline**
+    - Trigger the Airflow DAG to process the data.
+
+8. **Connect Power BI**
+    - Import the PostgreSQL data into Power BI to generate dashboards.
+
+## Usage
+
+- **Analyze Trends:**
+    - Use the Power BI dashboards to monitor attendance, grades, and success rates.
+
+- **Perform Multidimensional Analysis:**
+    - Query the OLAP cube to explore correlations and trends across dimensions like time, modules, and students.
+
+- **Make Data-Driven Decisions:**
+    - Leverage insights to optimize educational strategies and resource allocation.
+
+## Team Members
+
+- Mohammed EZZOUAK
+- Madani Ouail
+- El Otmani Abderrahim
+- Benaouda Salma
+- Bamhaouch Fatima-zahra
+
+## Acknowledgments
+
+Special thanks to M. Yacine EL YOUNOUSSI, our supervisor, for his invaluable guidance throughout the project.

@@ -1,0 +1,43 @@
+<Schema name="Bi_schema" description="Schema for student performance">
+  <Dimension type="StandardDimension" visible="true" name="Dim_Student">
+    <Hierarchy name="Student" visible="true" hasAll="true" primaryKey="apogee">
+      <Table name="dim_student" schema="public" alias=""/>
+      <Level name="Apogee" visible="true" column="apogee" uniqueMembers="true"/>
+      <Level name="Nom" visible="true" column="nom" uniqueMembers="false"/>
+      <Level name="Prenom" visible="true" column="prenom" uniqueMembers="false"/>
+      <Level name="Genre" visible="true" column="sexe" uniqueMembers="false"/>
+    </Hierarchy>
+  </Dimension>
+  <Dimension type="StandardDimension" visible="true" name="Dim_Module">
+    <Hierarchy name="Module" visible="true" hasAll="true" primaryKey="module_id">
+      <Table name="dim_module" schema="public" alias=""/>
+      <Level name="Code" visible="true" column="code" uniqueMembers="true"/>
+      <Level name="Name" visible="true" column="name" uniqueMembers="false"/>
+      <Level name="Filiere" visible="true" column="filiere" uniqueMembers="false"/>
+      <Level name="Semester" visible="true" column="semester" uniqueMembers="false"/>
+    </Hierarchy>
+  </Dimension>
+  <Dimension type="StandardDimension" visible="true" name="Dim_Professor">
+    <Hierarchy name="Professor" visible="true" hasAll="true" primaryKey="prof_id">
+      <Table name="dim_professor" schema="public" alias=""/>
+      <Level name="Name" visible="true" column="name" uniqueMembers="false"/>
+      <Level name="Department" visible="true" column="departement" uniqueMembers="false"/>
+    </Hierarchy>
+  </Dimension>
+  <Dimension type="StandardDimension" visible="true" name="Dim_Time">
+    <Hierarchy name="Time" visible="true" hasAll="true" primaryKey="time_id">
+      <Table name="dim_time" schema="public" alias=""/>
+      <Level name="Year" visible="true" column="year" uniqueMembers="false"/>
+      <Level name="Semester" visible="true" column="semester" uniqueMembers="false"/>
+    </Hierarchy>
+  </Dimension>
+  <Cube name="student_marks_Cube" visible="true" cache="true" enabled="true">
+    <Table name="fact_student_performance" schema="public"/>
+    <DimensionUsage source="Dim_Student" name="Student" visible="true" foreignKey="apogee"/>
+    <DimensionUsage source="Dim_Module" name="Module" visible="true" foreignKey="module_id"/>
+    <DimensionUsage source="Dim_Professor" name="Professor" visible="true" foreignKey="prof_id"/>
+    <DimensionUsage source="Dim_Time" name="Time" visible="true" foreignKey="time_id"/>
+    <Measure name="Avg_note" column="mark" datatype="Numeric" formatString="#,###" aggregator="avg" visible="true"/>
+    <Measure name="Total_absences" column="total_absences" formatString="#,###" aggregator="sum" visible="true"/>
+  </Cube>
+</Schema>
